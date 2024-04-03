@@ -54,6 +54,7 @@ num_workers = int(args.num_workers)
 lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
+exp_dir = 'result/'
 '''
 ##### data settings
 data_dir = join('data', datasets_dir)
@@ -106,6 +107,11 @@ trainset = torchvision.datasets.FGVCAircraft(root='./data', split='train',
                                         download=True, transform=train_transform)
 train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                           shuffle=True, num_workers=2)
+
+evalset = torchvision.datasets.FGVCAircraft(root='./data', split='eval',
+                                       download=True, transform=test_transform)
+eval_loader = torch.utils.data.DataLoader(evalset, batch_size=batch_size,
+                                         shuffle=False, num_workers=2)
 
 testset = torchvision.datasets.FGVCAircraft(root='./data', split='test',
                                        download=True, transform=test_transform)
@@ -230,12 +236,14 @@ for epoch in range(nb_epoch):
     ##### Evaluating model with test data every epoch
     with torch.no_grad():
         net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
+        '''
         eval_set = ImageFolder(
             root=join(data_dir, data_sets[-1]), transform=test_transform
         )
         eval_loader = DataLoader(
             eval_set, batch_size=batch_size, shuffle=False, num_workers=num_workers
         )
+        '''
         eval_correct = eval_total = 0
         for _, (inputs, targets) in enumerate(tqdm(eval_loader, ncols=80)):
             inputs, targets = inputs.cuda(), targets.cuda()
@@ -249,7 +257,7 @@ for epoch in range(nb_epoch):
                 data_sets[-1], eval_acc, eval_correct, eval_total
             )
         )
-
+'''
         ##### Logging
         with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
             file.write(
@@ -257,7 +265,7 @@ for epoch in range(nb_epoch):
                     epoch, lr_now, train_loss, train_acc, eval_acc
                 )
             )
-
+'''
         ##### save model with highest acc
         if eval_acc > max_eval_acc:
             max_eval_acc = eval_acc
@@ -281,13 +289,14 @@ net.load_state_dict(torch.load(join(exp_dir, 'max_acc.pth')))
 net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
 
 for data_set in data_sets:
+    '''
     testset = ImageFolder(
         root=os.path.join(data_dir, data_set), transform=test_transform
     )
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
-
+    '''
     test_loss = correct = total = 0
     with torch.no_grad():
         for _, (inputs, targets) in enumerate(tqdm(testloader, ncols=80)):
@@ -298,7 +307,7 @@ for data_set in data_sets:
             correct += predicted.eq(targets.data).cpu().sum()
     test_acc = 100.0 * float(correct) / total
     print('Dataset {}\tACC:{:.2f}\n'.format(data_set, test_acc))
-
+    '''
     ##### logging
     with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
         file.write('Dataset {}\tACC:{:.2f}\n'.format(data_set, test_acc))
@@ -308,3 +317,4 @@ for data_set in data_sets:
     ) as file:
         # save accuracy as file name
         pass
+    '''
