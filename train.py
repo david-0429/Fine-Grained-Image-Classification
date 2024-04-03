@@ -332,3 +332,4 @@ for data_set in data_sets:
         # save accuracy as file name
         pass
     '''
+wandb.finish()
