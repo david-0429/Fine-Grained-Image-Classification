@@ -47,10 +47,16 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+
 ### wandb init
 print("wandb init")
 def get_timestamp():
     return datetime.now().strftime("%b%d_%H-%M-%S")
+wandb.init(
+    # Set the project where this run will be logged
+    project=f"Team-Project", 
+    name=f"{FGVC}_{args.batch_size}-{get_timestamp()}"
+)
 
 
 ##### exp setting
