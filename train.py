@@ -269,7 +269,7 @@ for epoch in range(nb_epoch):
         )
         wandb.log({"epoch/val_acc": eval_acc, "epoch": epoch})
         
-'''
+        '''
         ##### Logging
         with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
             file.write(
@@ -277,7 +277,7 @@ for epoch in range(nb_epoch):
                     epoch, lr_now, train_loss, train_acc, eval_acc
                 )
             )
-'''
+        '''
         ##### save model with highest acc
         if eval_acc > max_eval_acc:
             max_eval_acc = eval_acc
