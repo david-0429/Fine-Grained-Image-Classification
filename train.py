@@ -55,7 +55,7 @@ def get_timestamp():
 wandb.init(
     # Set the project where this run will be logged
     project=f"Team-Project", 
-    name=f"{FGVC}_{args.batch_size}-{get_timestamp()}"
+    name=f"{'FGVC'}_{args.batch_size}-{get_timestamp()}"
 )
 
 
