@@ -47,18 +47,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-
-### wandb init
-print("wandb init")
-def get_timestamp():
-    return datetime.now().strftime("%b%d_%H-%M-%S")
-wandb.init(
-    # Set the project where this run will be logged
-    project=f"Team-Project", 
-    name=f"{'FGVC'}_{args.batch_size}-{get_timestamp()}"
-)
-
-
 ##### exp setting
 seed = int(args.seed)
 # datasets_dir = args.dir
@@ -139,6 +127,18 @@ train_loader = DataLoader(
     train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers
 )
 '''
+
+
+### wandb init
+print("wandb init")
+def get_timestamp():
+    return datetime.now().strftime("%b%d_%H-%M-%S")
+wandb.init(
+    # Set the project where this run will be logged
+    project=f"Team-Project", 
+    name=f"{'FGVC'}_{args.batch_size}_{crop_size}-{get_timestamp()}"
+)
+
 
 ##### Model settings
 net = resnet50(
