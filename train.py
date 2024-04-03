@@ -6,6 +6,7 @@ from os.path import join
 
 import numpy as np
 import torch
+import torchvision
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -22,7 +23,7 @@ from LabelSmoothing import LabelSmoothingLoss
 
 ##### args setting
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--dir', default='fgvc', help='dataset dir')
+#parser.add_argument('-d', '--dir', default='fgvc', help='dataset dir')
 parser.add_argument('-b', '--batch_size', default=64, help='batch_size')
 parser.add_argument(
     '-g', '--gpu', default='0', help='example: 0 or 1, to use different gpu'
@@ -46,14 +47,14 @@ args = parser.parse_args()
 
 ##### exp setting
 seed = int(args.seed)
-datasets_dir = args.dir
+# datasets_dir = args.dir
 nb_epoch = 128  # 128 as default to suit scheduler
 batch_size = int(args.batch_size)
 num_workers = int(args.num_workers)
 lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
-
+'''
 ##### data settings
 data_dir = join('data', datasets_dir)
 data_sets = ['train', 'test']
@@ -61,7 +62,7 @@ nb_class = len(
     os.listdir(join(data_dir, data_sets[0]))
 )  # get number of class via img folders automatically
 exp_dir = 'result/{}{}'.format(datasets_dir, args.note)  # the folder to save model
-
+'''
 
 ##### CUDA device setting
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -101,11 +102,22 @@ test_transform = transforms.Compose(
     ]
 )
 
+trainset = torchvision.datasets.FGVCAircraft(root='./data', split='train',
+                                        download=True, transform=train_transform)
+train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                          shuffle=True, num_workers=2)
+
+testset = torchvision.datasets.FGVCAircraft(root='./data', split='test',
+                                       download=True, transform=test_transform)
+test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
+                                         shuffle=False, num_workers=2)
+nb_class = 100
+'''
 train_set = ImageFolder(root=join(data_dir, data_sets[0]), transform=train_transform)
 train_loader = DataLoader(
     train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers
 )
-
+'''
 
 ##### Model settings
 net = resnet50(
@@ -128,7 +140,7 @@ optimizer = torch.optim.SGD(
 )
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=128)
 
-
+'''
 ##### file/folder prepare
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
@@ -138,7 +150,7 @@ shutil.copyfile('LabelSmoothing.py', exp_dir + '/LabelSmoothing.py')
 
 with open(os.path.join(exp_dir, 'train_log.csv'), 'w+') as file:
     file.write('Epoch, lr, Train_Loss, Train_Acc, Test_Acc\n')
-
+'''
 
 ##### Apex
 if use_amp == 1:  # use nvidia apex.amp
