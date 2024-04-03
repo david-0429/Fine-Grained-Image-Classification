@@ -117,7 +117,7 @@ trainset = torchvision.datasets.FGVCAircraft(root='./data', split='train',
 train_loader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                           shuffle=True, num_workers=2)
 
-evalset = torchvision.datasets.FGVCAircraft(root='./data', split='eval',
+evalset = torchvision.datasets.FGVCAircraft(root='./data', split='val',
                                        download=True, transform=test_transform)
 eval_loader = torch.utils.data.DataLoader(evalset, batch_size=batch_size,
                                          shuffle=False, num_workers=2)
@@ -311,7 +311,7 @@ for data_set in data_sets:
     '''
     test_loss = correct = total = 0
     with torch.no_grad():
-        for _, (inputs, targets) in enumerate(tqdm(testloader, ncols=80)):
+        for _, (inputs, targets) in enumerate(tqdm(test_loader, ncols=80)):
             inputs, targets = inputs.cuda(), targets.cuda()
             x = net(inputs)
             _, predicted = torch.max(x.data, 1)
