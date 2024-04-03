@@ -72,7 +72,7 @@ numpy == 1.20.2
 
 Simple usage:
 ```python
-python train.py -d dataset_dir
+python train.py
 ```
 
 
