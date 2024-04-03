@@ -55,6 +55,7 @@ lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
 exp_dir = 'result/'
+data_sets = ['train', 'eval', 'test']
 '''
 ##### data settings
 data_dir = join('data', datasets_dir)
@@ -254,7 +255,7 @@ for epoch in range(nb_epoch):
         eval_acc = 100.0 * float(eval_correct) / eval_total
         print(
             '{} | Acc: {:.3f}% ({}/{})'.format(
-                data_sets[-1], eval_acc, eval_correct, eval_total
+                data_sets[1], eval_acc, eval_correct, eval_total
             )
         )
 '''
