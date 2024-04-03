@@ -3,6 +3,8 @@ import os
 import random
 import shutil
 from os.path import join
+import time
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -13,6 +15,7 @@ from torchvision import transforms
 from torchvision.datasets.folder import ImageFolder
 from torchvision.models import resnet50
 from tqdm import tqdm
+import wandb
 
 from LabelSmoothing import LabelSmoothingLoss
 
@@ -43,6 +46,11 @@ parser.add_argument(
     help='0: w/o amp, 1: w/ nvidia apex.amp, 2: w/ torch.cuda.amp',
 )
 args = parser.parse_args()
+
+### wandb init
+print("wandb init")
+def get_timestamp():
+    return datetime.now().strftime("%b%d_%H-%M-%S")
 
 
 ##### exp setting
@@ -233,7 +241,8 @@ for epoch in range(nb_epoch):
             lr_now, train_loss, train_acc, train_correct, train_total
         )
     )
-
+    wandb.log({"epoch/train_acc": train_acc, "epoch/trn_loss": train_loss, "epoch": epoch})
+    
     ##### Evaluating model with test data every epoch
     with torch.no_grad():
         net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
@@ -258,6 +267,8 @@ for epoch in range(nb_epoch):
                 data_sets[1], eval_acc, eval_correct, eval_total
             )
         )
+        wandb.log({"epoch/val_acc": eval_acc, "epoch": epoch})
+        
 '''
         ##### Logging
         with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
@@ -308,6 +319,8 @@ for data_set in data_sets:
             correct += predicted.eq(targets.data).cpu().sum()
     test_acc = 100.0 * float(correct) / total
     print('Dataset {}\tACC:{:.2f}\n'.format(data_set, test_acc))
+    wandb.log({"epoch/test_acc": test_acc, "epoch": epoch})
+    
     '''
     ##### logging
     with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
