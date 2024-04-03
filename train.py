@@ -283,7 +283,7 @@ for epoch in range(nb_epoch):
                     epoch, lr_now, train_loss, train_acc, eval_acc
                 )
             )
-        '''
+        
         ##### save model with highest acc
         if eval_acc > max_eval_acc:
             max_eval_acc = eval_acc
@@ -292,7 +292,7 @@ for epoch in range(nb_epoch):
                 os.path.join(exp_dir, 'max_acc.pth'),
                 _use_new_zipfile_serialization=False,
             )
-
+        '''
 
 ########################
 ##### 3 - Testing  #####
