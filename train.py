@@ -85,8 +85,8 @@ torch.backends.cudnn.benchmark = False
 
 
 ##### Dataloader setting
-re_size = 512
-crop_size = 448
+re_size = 300
+crop_size = 224
 
 train_transform = transforms.Compose(
     [
@@ -136,7 +136,7 @@ def get_timestamp():
 wandb.init(
     # Set the project where this run will be logged
     project=f"Team-Project", 
-    name=f"{'FGVC'}_{args.batch_size}_{crop_size}-{get_timestamp()}"
+    name=f"{'ResNet50'}_{args.batch_size}_{crop_size}-{get_timestamp()}"
 )
 
 
