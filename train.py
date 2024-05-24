@@ -50,7 +50,8 @@ args = parser.parse_args()
 ##### exp setting
 seed = int(args.seed)
 # datasets_dir = args.dir
-nb_epoch = 128  # 128 as default to suit scheduler
+nb_epoch = int(100)  # 128 as default to suit scheduler
+val_interval = 5
 batch_size = int(args.batch_size)
 num_workers = int(args.num_workers)
 lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
@@ -159,7 +160,7 @@ LSLoss = LabelSmoothingLoss(
 optimizer = torch.optim.SGD(
     net.parameters(), lr=lr_begin, momentum=0.9, weight_decay=5e-4
 )
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=128)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=nb_epoch)
 
 '''
 ##### file/folder prepare
@@ -248,51 +249,52 @@ for epoch in range(nb_epoch):
         )
     )
     wandb.log({"epoch/train_acc": train_acc, "epoch/trn_loss": train_loss, "epoch": epoch})
-    
-    ##### Evaluating model with test data every epoch
-    with torch.no_grad():
-        net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
-        '''
-        eval_set = ImageFolder(
-            root=join(data_dir, data_sets[-1]), transform=test_transform
-        )
-        eval_loader = DataLoader(
-            eval_set, batch_size=batch_size, shuffle=False, num_workers=num_workers
-        )
-        '''
-        eval_correct = eval_total = 0
-        for _, (inputs, targets) in enumerate(tqdm(eval_loader, ncols=80)):
-            inputs, targets = inputs.cuda(), targets.cuda()
-            x = net(inputs)
-            _, predicted = torch.max(x.data, 1)
-            eval_total += targets.size(0)
-            eval_correct += predicted.eq(targets.data).cpu().sum()
-        eval_acc = 100.0 * float(eval_correct) / eval_total
-        print(
-            '{} | Acc: {:.3f}% ({}/{})'.format(
-                data_sets[1], eval_acc, eval_correct, eval_total
+
+    if epoch % val_interval == 0:
+        ##### Evaluating model with test data every epoch
+        with torch.no_grad():
+            net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
+            '''
+            eval_set = ImageFolder(
+                root=join(data_dir, data_sets[-1]), transform=test_transform
             )
-        )
-        wandb.log({"epoch/val_acc": eval_acc, "epoch": epoch})
-        
-        '''
-        ##### Logging
-        with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
-            file.write(
-                '{}, {:.4f}, {:.4f}, {:.3f}%, {:.3f}%\n'.format(
-                    epoch, lr_now, train_loss, train_acc, eval_acc
+            eval_loader = DataLoader(
+                eval_set, batch_size=batch_size, shuffle=False, num_workers=num_workers
+            )
+            '''
+            eval_correct = eval_total = 0
+            for _, (inputs, targets) in enumerate(tqdm(eval_loader, ncols=80)):
+                inputs, targets = inputs.cuda(), targets.cuda()
+                x = net(inputs)
+                _, predicted = torch.max(x.data, 1)
+                eval_total += targets.size(0)
+                eval_correct += predicted.eq(targets.data).cpu().sum()
+            eval_acc = 100.0 * float(eval_correct) / eval_total
+            print(
+                '{} | Acc: {:.3f}% ({}/{})'.format(
+                    data_sets[1], eval_acc, eval_correct, eval_total
                 )
             )
-        
-        ##### save model with highest acc
-        if eval_acc > max_eval_acc:
-            max_eval_acc = eval_acc
-            torch.save(
-                net.state_dict(),
-                os.path.join(exp_dir, 'max_acc.pth'),
-                _use_new_zipfile_serialization=False,
-            )
-        '''
+            wandb.log({"epoch/val_acc": eval_acc, "epoch": epoch})
+            
+            '''
+            ##### Logging
+            with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
+                file.write(
+                    '{}, {:.4f}, {:.4f}, {:.3f}%, {:.3f}%\n'.format(
+                        epoch, lr_now, train_loss, train_acc, eval_acc
+                    )
+                )
+            
+            ##### save model with highest acc
+            if eval_acc > max_eval_acc:
+                max_eval_acc = eval_acc
+                torch.save(
+                    net.state_dict(),
+                    os.path.join(exp_dir, 'max_acc.pth'),
+                    _use_new_zipfile_serialization=False,
+                )
+            '''
 
 ########################
 ##### 3 - Testing  #####
