@@ -13,7 +13,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets.folder import ImageFolder
-from torchvision.models import resnet50
 from tqdm import tqdm
 import wandb
 
@@ -142,7 +141,7 @@ wandb.init(
 
 
 ##### Model settings
-net = resnet50(
+net = torchvision.models.resnet50(
     pretrained=True
 )  # to use more models, see https://pytorch.org/vision/stable/models.html
 net.fc = nn.Linear(
