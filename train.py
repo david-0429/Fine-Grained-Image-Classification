@@ -86,8 +86,8 @@ torch.backends.cudnn.benchmark = False
 
 
 ##### Dataloader setting
-re_size = 300
-crop_size = 224
+re_size = 512
+crop_size = 448
 
 train_transform = transforms.Compose(
     [
