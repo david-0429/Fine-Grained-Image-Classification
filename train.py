@@ -53,7 +53,7 @@ nb_epoch = int(100)  # 128 as default to suit scheduler
 val_interval = 5
 batch_size = int(args.batch_size)
 num_workers = int(args.num_workers)
-lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
+lr_begin = 0.001  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
 exp_dir = 'result/'
@@ -85,8 +85,8 @@ torch.backends.cudnn.benchmark = False
 
 
 ##### Dataloader setting
-re_size = 512
-crop_size = 448
+re_size = 300
+crop_size = 224
 
 train_transform = transforms.Compose(
     [
@@ -136,16 +136,16 @@ def get_timestamp():
 wandb.init(
     # Set the project where this run will be logged
     project=f"Team-Project", 
-    name=f"{'ResNet50'}_{args.batch_size}_{crop_size}-{get_timestamp()}"
+    name=f"{'vit_b_16'}_{args.batch_size}_{lr_begin}_{crop_size}-{get_timestamp()}"
 )
 
 
 ##### Model settings
-net = torchvision.models.resnet50(
+net = torchvision.models.vit_b_16(
     pretrained=True
 )  # to use more models, see https://pytorch.org/vision/stable/models.html
-net.fc = nn.Linear(
-    net.fc.in_features, nb_class
+net.heads.head = nn.Linear(
+    net.heads.head.in_features, nb_class
 )  # set fc layer of model with exact class number of current dataset
 
 for param in net.parameters():
