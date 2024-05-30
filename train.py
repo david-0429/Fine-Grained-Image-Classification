@@ -15,6 +15,7 @@ from torchvision import transforms
 from torchvision.datasets.folder import ImageFolder
 from tqdm import tqdm
 import wandb
+import pdb
 
 from LabelSmoothing import LabelSmoothingLoss
 
@@ -53,7 +54,7 @@ nb_epoch = int(100)  # 128 as default to suit scheduler
 val_interval = 5
 batch_size = int(args.batch_size)
 num_workers = int(args.num_workers)
-lr_begin = 0.001  # learning rate at begining
+lr_begin = 0.025  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
 exp_dir = 'result/'
@@ -136,16 +137,16 @@ def get_timestamp():
 wandb.init(
     # Set the project where this run will be logged
     project=f"Team-Project", 
-    name=f"{'vit_b_16'}_{args.batch_size}_{lr_begin}_{crop_size}-{get_timestamp()}"
+    name=f"{'resnet50'}_{args.batch_size}_{lr_begin}_{crop_size}-{get_timestamp()}"
 )
 
 
 ##### Model settings
-net = torchvision.models.vit_b_16(
+net = torchvision.models.resnet50(
     pretrained=True
 )  # to use more models, see https://pytorch.org/vision/stable/models.html
-net.heads.head = nn.Linear(
-    net.heads.head.in_features, nb_class
+net.fc = nn.Linear(
+    net.fc.in_features, nb_class
 )  # set fc layer of model with exact class number of current dataset
 
 for param in net.parameters():
@@ -248,7 +249,7 @@ for epoch in range(nb_epoch):
         )
     )
     wandb.log({"epoch/train_acc": train_acc, "epoch/trn_loss": train_loss, "epoch": epoch})
-
+    
     if epoch % val_interval == 0:
         ##### Evaluating model with test data every epoch
         with torch.no_grad():
@@ -275,7 +276,21 @@ for epoch in range(nb_epoch):
                 )
             )
             wandb.log({"epoch/val_acc": eval_acc, "epoch": epoch})
-            
+
+            if epoch + 1 % 20 == 0:
+              softmax = torch.nn.Softmax(dim=1)
+              prob = softmax(x)
+              std = torch.std(prob, dim=1)
+              std_mean = torch.mean(std)
+              print(x[0])
+              print(
+                '{} | std_mean: {:.3f}'.format(
+                    data_sets[1], std_mean
+                )
+              )
+              wandb.log({"prob": x[0], "epoch": epoch})
+              wandb.log({"epoch/std_mean": std_mean, "epoch": epoch})
+
             '''
             ##### Logging
             with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
