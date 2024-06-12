@@ -16,6 +16,8 @@ from torchvision.datasets.folder import ImageFolder
 from tqdm import tqdm
 import wandb
 import pdb
+import matplotlib.pyplot as plt
+from PIL import Image
 
 from LabelSmoothing import LabelSmoothingLoss
 
@@ -54,7 +56,7 @@ nb_epoch = int(100)  # 128 as default to suit scheduler
 val_interval = 5
 batch_size = int(args.batch_size)
 num_workers = int(args.num_workers)
-lr_begin = 0.025  # learning rate at begining
+lr_begin = (batch_size / 256) * 0.1  # learning rate at begining
 use_amp = int(args.amp)  # use amp to accelerate training
 
 exp_dir = 'result/'
@@ -121,13 +123,65 @@ testset = torchvision.datasets.FGVCAircraft(root='./data', split='test',
                                        download=True, transform=test_transform)
 test_loader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
                                          shuffle=False, num_workers=2)
-nb_class = 100
+nb_class = len(trainset.classes)
+print("Number of classes in FGVCAircraft dataset:", nb_class)
 '''
 train_set = ImageFolder(root=join(data_dir, data_sets[0]), transform=train_transform)
 train_loader = DataLoader(
     train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers
 )
 '''
+
+#--------------------------------------------------------------#
+
+fig_label_num = 4
+fig_img_num = 5
+
+# 모든 레이블 추출
+all_labels = list(trainset.classes)
+
+# 무작위로 10개의 고유한 레이블 선택
+selected_labels = random.sample(all_labels, fig_label_num)
+
+# 레이블별로 이미지를 하나씩 선택
+label_to_images = {label: [] for label in selected_labels}
+for img, label in trainset:
+    label_name = trainset.classes[label]
+    if label_name in selected_labels and len(label_to_images[label_name]) < fig_img_num:
+        label_to_images[label_name].append(img)
+    if all(len(images) == fig_img_num for images in label_to_images.values()):
+        break
+
+# 선택된 이미지와 레이블을 리스트로 변환
+selected_images = [img for images in label_to_images.values() for img in images]
+selected_labels = [label for label, images in label_to_images.items() for _ in images]
+
+# 이미지 시각화 함수
+def imshow(img, title):
+    img = img / 2 + 0.5  # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.title(title)
+    plt.axis('off')
+
+# 이미지와 레이블 시각화 및 파일로 저장
+fig, axes = plt.subplots(fig_label_num, fig_img_num, figsize=(20, 16))
+axes = axes.flatten()
+
+for img, label, ax in zip(selected_images, selected_labels, axes):
+    img = img / 2 + 0.5  # unnormalize
+    npimg = img.numpy()
+    ax.imshow(np.transpose(npimg, (1, 2, 0)))
+    ax.set_title(label)
+    ax.axis('off')
+
+# 파일로 저장
+plt.savefig('fgvc_aircraft_samples.png', bbox_inches='tight')
+plt.close(fig)
+
+print("The image grid with labels has been saved as 'fgvc_aircraft_samples.png'.")
+
+#--------------------------------------------------------------#
 
 
 ### wandb init
@@ -310,6 +364,69 @@ for epoch in range(nb_epoch):
                 )
             '''
 
+#--------------------------------------------------------------#
+
+# Forward hook을 사용하여 특징 맵 추출
+feature_maps = {}
+
+def hook_fn(name):
+    def hook(module, input, output):
+        feature_maps[name] = output
+    return hook
+
+# 첫 번째, 중간, 마지막 레이어에 hook 등록
+hooks = []
+hooks.append(net.conv1.register_forward_hook(hook_fn('conv1')))
+hooks.append(net.layer2[-1].conv3.register_forward_hook(hook_fn('layer2')))
+hooks.append(net.layer4[-1].conv3.register_forward_hook(hook_fn('layer4')))
+
+# 검증 배치의 0번째 이미지 가져오기
+val_batch = next(iter(eval_loader))
+val_image = val_batch[0][0].unsqueeze(0).cuda()
+
+# 모델을 통해 이미지 전달 (순전파)
+net.eval()
+with torch.no_grad():
+    net(val_image)
+
+# hook 제거
+for hook in hooks:
+    hook.remove()
+
+# 폴더 생성
+output_folder = 'feature_maps'
+os.makedirs(output_folder, exist_ok=True)
+
+# 특징 맵 시각화 및 파일 저장 함수
+def save_feature_map(feature_map, file_name):
+    feature_map = feature_map.cpu().squeeze()
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(feature_map.mean(dim=0).detach().numpy(), cmap='viridis')
+    ax.axis("off")
+    plt.savefig(os.path.join(output_folder, file_name), bbox_inches='tight')
+    plt.close(fig)
+
+# 특징 맵 저장
+save_feature_map(feature_maps['conv1'], 'conv1_feature_map.png')
+save_feature_map(feature_maps['layer2'], 'layer2_feature_map.png')
+save_feature_map(feature_maps['layer4'], 'layer4_feature_map.png')
+
+# 원본 이미지 저장
+original_image = val_image.cpu().squeeze().permute(1, 2, 0).numpy()
+original_image = original_image * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])
+original_image = np.clip(original_image, 0, 1)
+plt.imshow(original_image)
+plt.axis('off')
+plt.savefig(os.path.join(output_folder, 'original_image.png'), bbox_inches='tight')
+plt.close()
+
+print("Feature maps and original image saved successfully.")
+
+#--------------------------------------------------------------#
+
+
+
+'''
 ########################
 ##### 3 - Testing  #####
 ########################
@@ -323,14 +440,14 @@ net.load_state_dict(torch.load(join(exp_dir, 'max_acc.pth')))
 net.eval()  # set model to eval mode, disable Batch Normalization and Dropout
 
 for data_set in data_sets:
-    '''
+    
     testset = ImageFolder(
         root=os.path.join(data_dir, data_set), transform=test_transform
     )
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
-    '''
+    
     test_loss = correct = total = 0
     with torch.no_grad():
         for _, (inputs, targets) in enumerate(tqdm(test_loader, ncols=80)):
@@ -343,7 +460,7 @@ for data_set in data_sets:
     print('Dataset {}\tACC:{:.2f}\n'.format(data_set, test_acc))
     wandb.log({"epoch/test_acc": test_acc, "epoch": epoch})
     
-    '''
+    
     ##### logging
     with open(os.path.join(exp_dir, 'train_log.csv'), 'a+') as file:
         file.write('Dataset {}\tACC:{:.2f}\n'.format(data_set, test_acc))
@@ -353,5 +470,6 @@ for data_set in data_sets:
     ) as file:
         # save accuracy as file name
         pass
-    '''
+    
+'''
 wandb.finish()
